@@ -5,9 +5,9 @@ from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Inches, Pt
+from docx.shared import Cm, Inches, Pt, RGBColor
 
-from schemas.thesis_schema import Appendix, Chapter, FigureEntry, Section, SymbolEntry, TableEntry, ThesisSchema
+from schemas.thesis_schema import Appendix, Chapter, Section, SymbolEntry, ThesisSchema
 
 FONT_ZH = "標楷體"
 FONT_EN = "Times New Roman"
@@ -121,36 +121,112 @@ def _body(doc: Document, text: str, indent=True) -> None:
 
 
 def _heading1(doc: Document, text: str) -> None:
-    para = doc.add_paragraph()
+    para = doc.add_paragraph(style="Heading 1")
     _para_fmt(para, align=WD_ALIGN_PARAGRAPH.LEFT, space_before_pt=8)
     run = para.add_run(text)
     _set_font(run, size_pt=13, bold=True)
 
 
 def _heading2(doc: Document, text: str) -> None:
-    para = doc.add_paragraph()
+    para = doc.add_paragraph(style="Heading 2")
     _para_fmt(para, align=WD_ALIGN_PARAGRAPH.LEFT,
               left_indent_pt=BODY_PT, space_before_pt=4)
     run = para.add_run(text)
     _set_font(run, size_pt=BODY_PT)
 
 
-def _toc_line(doc: Document, label: str, page: str = "", indent_pt=0) -> None:
+def _chapter_heading(doc: Document, text: str, size_pt: int, italic: bool = False) -> None:
+    """Chapter title tagged as Heading 1 so TOC picks it up, but rendered centred."""
+    para = doc.add_paragraph(style="Heading 1")
+    _para_fmt(para, align=WD_ALIGN_PARAGRAPH.CENTER, space_after_pt=6)
+    run = para.add_run(text)
+    _set_font(run, size_pt=size_pt, bold=True, italic=italic)
+
+
+def _configure_toc_styles(doc: Document) -> None:
+    for level in (1, 2, 3):
+        try:
+            style = doc.styles[f"TOC {level}"]
+        except KeyError:
+            continue
+        font = style.font
+        font.name = FONT_EN
+        font.size = Pt(12)
+        font.color.rgb = RGBColor(0x00, 0x00, 0x00)
+        rPr = style.element.get_or_add_rPr()
+        for existing in rPr.findall(qn("w:rFonts")):
+            rPr.remove(existing)
+        rFonts = OxmlElement("w:rFonts")
+        rFonts.set(qn("w:ascii"), FONT_EN)
+        rFonts.set(qn("w:hAnsi"), FONT_EN)
+        rFonts.set(qn("w:eastAsia"), FONT_ZH)
+        rPr.insert(0, rFonts)
+
+
+def _configure_heading_styles(doc: Document) -> None:
+    """Override built-in Heading styles so the downloaded file matches NCU thesis fonts."""
+    specs = [
+        ("Heading 1", 16, True),
+        ("Heading 2", 13, True),
+        ("Heading 3", BODY_PT, True),
+    ]
+    for name, size_pt, bold in specs:
+        try:
+            style = doc.styles[name]
+        except KeyError:
+            continue
+        font = style.font
+        font.name = FONT_EN
+        font.size = Pt(size_pt)
+        font.bold = bold
+        font.color.rgb = RGBColor(0, 0, 0)
+        rPr = style.element.get_or_add_rPr()
+        for existing in rPr.findall(qn("w:rFonts")):
+            rPr.remove(existing)
+        rFonts = OxmlElement("w:rFonts")
+        rFonts.set(qn("w:ascii"), FONT_EN)
+        rFonts.set(qn("w:hAnsi"), FONT_EN)
+        rFonts.set(qn("w:eastAsia"), FONT_ZH)
+        rPr.insert(0, rFonts)
+
+
+def _insert_toc_field(doc: Document, switches: str) -> None:
+    """Insert a Word TOC field. Updates on first open in Word (F9 / prompt)."""
     para = doc.add_paragraph()
-    _para_fmt(para, left_indent_pt=indent_pt)
-    run_label = para.add_run(label)
-    _set_font(run_label)
-    if page:
-        run_tab = para.add_run(f"\t{page}")
-        _set_font(run_tab)
-        # Right-align tab
-        pPr = para._p.get_or_add_pPr()
-        tabs = OxmlElement("w:tabs")
-        tab = OxmlElement("w:tab")
-        tab.set(qn("w:val"), "right")
-        tab.set(qn("w:pos"), "8640")
-        tabs.append(tab)
-        pPr.append(tabs)
+    _para_fmt(para)
+    run = para.add_run()
+    _set_font(run)
+
+    begin = OxmlElement("w:fldChar")
+    begin.set(qn("w:fldCharType"), "begin")
+    run._r.append(begin)
+
+    instr = OxmlElement("w:instrText")
+    instr.set(qn("xml:space"), "preserve")
+    instr.text = f" TOC {switches} "
+    run._r.append(instr)
+
+    sep = OxmlElement("w:fldChar")
+    sep.set(qn("w:fldCharType"), "separate")
+    run._r.append(sep)
+
+    placeholder = OxmlElement("w:t")
+    placeholder.text = "（請於 Word 中按 F9 更新目錄）"
+    run._r.append(placeholder)
+
+    end = OxmlElement("w:fldChar")
+    end.set(qn("w:fldCharType"), "end")
+    run._r.append(end)
+
+
+def _enable_update_fields_on_open(doc: Document) -> None:
+    """Ask Word to prompt/update all fields when the document is opened."""
+    settings = doc.settings.element
+    for existing in settings.findall(qn("w:updateFields")):
+        settings.remove(existing)
+    update = OxmlElement("w:updateFields")
+    update.set(qn("w:val"), "true")
+    settings.append(update)
 
 
 def _add_page_break(doc: Document) -> None:
@@ -258,45 +334,22 @@ def _build_acknowledgments(doc: Document, schema: ThesisSchema) -> None:
             _body(doc, para_text)
 
 
-def _build_toc(doc: Document, schema: ThesisSchema) -> None:
+def _build_toc(doc: Document) -> None:
     _add_page_break(doc)
     _center(doc, "目錄", size_pt=16, bold=True, space_after=8)
-
-    _toc_line(doc, "摘要", "i")
-    _toc_line(doc, "Abstract", "ii")
-    _toc_line(doc, "誌謝", "iii")
-    _toc_line(doc, "目錄", "iv")
-    _toc_line(doc, "圖目錄", "v")
-    _toc_line(doc, "表目錄", "vi")
-    if schema.symbols:
-        _toc_line(doc, "符號說明", "vii")
-
-    for ch in schema.chapters:
-        _toc_line(doc, f"第{_to_zh(ch.number)}章　{ch.titleZh}", str(ch.number))
-        for sec in ch.sections:
-            _toc_line(doc, f"{sec.id}　{sec.titleZh}", "", indent_pt=24)
-            if sec.subsections:
-                for sub in sec.subsections:
-                    _toc_line(doc, f"{sub.id}　{sub.titleZh}", "", indent_pt=48)
-
-    _toc_line(doc, "參考文獻", "")
-    if schema.appendices:
-        for ap in schema.appendices:
-            _toc_line(doc, f"附錄{ap.label}　{ap.title}", "")
+    _insert_toc_field(doc, r'\o "1-3" \h \z \u')
 
 
-def _build_figure_list(doc: Document, figures: list[FigureEntry]) -> None:
+def _build_figure_list(doc: Document) -> None:
     _add_page_break(doc)
     _center(doc, "圖目錄", size_pt=16, bold=True, space_after=8)
-    for f in figures:
-        _toc_line(doc, f"圖 {f.number}　{f.title}", str(f.page) if f.page else "")
+    _insert_toc_field(doc, r'\h \z \c "圖"')
 
 
-def _build_table_list(doc: Document, tables: list[TableEntry]) -> None:
+def _build_table_list(doc: Document) -> None:
     _add_page_break(doc)
     _center(doc, "表目錄", size_pt=16, bold=True, space_after=8)
-    for t in tables:
-        _toc_line(doc, f"表 {t.number}　{t.title}", str(t.page) if t.page else "")
+    _insert_toc_field(doc, r'\h \z \c "表"')
 
 
 def _build_symbols(doc: Document, symbols: list[SymbolEntry]) -> None:
@@ -312,10 +365,17 @@ def _build_symbols(doc: Document, symbols: list[SymbolEntry]) -> None:
 
 
 def _build_section(doc: Document, sec: Section, depth: int) -> None:
+    label = f"{sec.id}　{sec.titleZh}"
     if depth == 1:
-        _heading1(doc, f"{sec.id}　{sec.titleZh}")
+        _heading1(doc, label)
+    elif depth == 2:
+        _heading2(doc, label)
     else:
-        _heading2(doc, f"{sec.id}　{sec.titleZh}")
+        para = doc.add_paragraph(style="Heading 3")
+        _para_fmt(para, align=WD_ALIGN_PARAGRAPH.LEFT,
+                  left_indent_pt=BODY_PT * 2, space_before_pt=4)
+        run = para.add_run(label)
+        _set_font(run, size_pt=BODY_PT, bold=True)
 
     for para_text in sec.content.split("\n"):
         if para_text.strip():
@@ -330,7 +390,7 @@ def _build_chapters(doc: Document, chapters: list[Chapter]) -> None:
     for ch in chapters:
         _add_page_break(doc)
         ch_title = f"第{_to_zh(ch.number)}章　{ch.titleZh}"
-        _center(doc, ch_title, size_pt=16, bold=True, space_after=6)
+        _chapter_heading(doc, ch_title, size_pt=16)
         if ch.titleEn:
             en_title = f"Chapter {_to_roman(ch.number)}: {ch.titleEn}"
             _center(doc, en_title, size_pt=14, bold=True, italic=True, space_after=8)
@@ -363,6 +423,9 @@ def _build_appendices(doc: Document, appendices: list[Appendix]) -> None:
 
 def build_thesis_docx(schema: ThesisSchema) -> bytes:
     doc = Document()
+    _configure_heading_styles(doc)
+    _enable_update_fields_on_open(doc)
+    _configure_toc_styles(doc)
 
     # Remove default empty paragraph
     for p in doc.paragraphs:
@@ -383,9 +446,9 @@ def build_thesis_docx(schema: ThesisSchema) -> bytes:
     _build_abstract_zh(doc, schema)
     _build_abstract_en(doc, schema)
     _build_acknowledgments(doc, schema)
-    _build_toc(doc, schema)
-    _build_figure_list(doc, schema.figures)
-    _build_table_list(doc, schema.tables)
+    _build_toc(doc)
+    _build_figure_list(doc)
+    _build_table_list(doc)
     if schema.symbols:
         _build_symbols(doc, schema.symbols)
 
