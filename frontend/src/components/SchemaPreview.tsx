@@ -9,12 +9,14 @@ import {
   ThesisSchema,
 } from '../types/ThesisSchema';
 
+export type Tab = 'cover' | 'abstract' | 'acknowledgments' | 'chapters' | 'bibliography' | 'figures' | 'appendices';
+
 interface Props {
   schema: ThesisSchema;
   onChange: (updated: ThesisSchema) => void;
+  tab: Tab;
+  onTabChange: (tab: Tab) => void;
 }
-
-type Tab = 'cover' | 'abstract' | 'acknowledgments' | 'chapters' | 'bibliography' | 'figures' | 'appendices';
 
 const TAB_LABELS: [Tab, string][] = [
   ['cover', '封面'],
@@ -127,19 +129,17 @@ function SectionEditor({
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function SchemaPreview({ schema, onChange }: Props) {
-  const [tab, setTab] = useState<Tab>('cover');
-
+export function SchemaPreview({ schema, onChange, tab, onTabChange }: Props) {
   function set<K extends keyof ThesisSchema>(key: K, value: ThesisSchema[K]) {
     onChange({ ...schema, [key]: value });
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
+    <div>
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #ddd', marginBottom: 24, overflowX: 'auto' }}>
         {TAB_LABELS.map(([key, lbl]) => (
-          <button key={key} style={tabStyle(tab === key)} onClick={() => setTab(key)}>{lbl}</button>
+          <button key={key} style={tabStyle(tab === key)} onClick={() => onTabChange(key)}>{lbl}</button>
         ))}
       </div>
 

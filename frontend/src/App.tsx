@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { generateDocx, uploadDraft } from './api';
 import { DownloadButton } from './components/DownloadButton';
-import { SchemaPreview } from './components/SchemaPreview';
+import { SchemaPreview, Tab } from './components/SchemaPreview';
+import { ThesisPreview } from './components/ThesisPreview';
 import { UploadZone } from './components/UploadZone';
 import { ThesisSchema } from './types/ThesisSchema';
 
@@ -12,6 +13,7 @@ export default function App() {
   const [schema, setSchema] = useState<ThesisSchema | null>(null);
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [activeTab, setActiveTab] = useState<Tab>('cover');
 
   async function handleUpload(file: File) {
     setStage('uploading');
@@ -47,6 +49,7 @@ export default function App() {
     setStage('idle');
     setSchema(null);
     setError('');
+    setActiveTab('cover');
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl('');
   }
@@ -63,7 +66,13 @@ export default function App() {
         )}
       </header>
 
-      <main style={{ maxWidth: 960, margin: '0 auto', padding: '32px 20px' }}>
+      <main
+        style={{
+          maxWidth: stage === 'reviewing' ? 1440 : 960,
+          margin: '0 auto',
+          padding: '32px 20px',
+        }}
+      >
         {error && (
           <div style={{ background: '#fdecea', border: '1px solid #f5c6cb', borderRadius: 8, padding: '12px 16px', marginBottom: 24, color: '#721c24' }}>
             {error}
@@ -83,9 +92,55 @@ export default function App() {
         {stage === 'reviewing' && schema && (
           <div>
             <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '12px 16px', marginBottom: 24, color: '#2e7d32' }}>
-              ✅ 解析完成！請確認並修改下方內容後，點擊「產生論文」
+              ✅ 解析完成！左側編輯、右側即時預覽。完成後點擊「產生論文」
             </div>
-            <SchemaPreview schema={schema} onChange={setSchema} />
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                gap: 24,
+                alignItems: 'start',
+              }}
+            >
+              {/* 左：表單 */}
+              <div
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 10,
+                  padding: 20,
+                  maxHeight: 'calc(100vh - 180px)',
+                  overflowY: 'auto',
+                }}
+              >
+                <SchemaPreview
+                  schema={schema}
+                  onChange={setSchema}
+                  tab={activeTab}
+                  onTabChange={setActiveTab}
+                />
+              </div>
+
+              {/* 右：A4 即時預覽 */}
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 20,
+                  background: '#e9ecf1',
+                  borderRadius: 10,
+                  padding: '24px 16px',
+                  maxHeight: 'calc(100vh - 180px)',
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 12, letterSpacing: 1 }}>
+                  A4 即時預覽 · {tabLabel(activeTab)}
+                </div>
+                <ThesisPreview schema={schema} tab={activeTab} />
+              </div>
+            </div>
+
             <div style={{ textAlign: 'center', marginTop: 32 }}>
               <DownloadButton onClick={handleGenerate} loading={false} />
             </div>
@@ -141,6 +196,18 @@ function Spinner() {
       animation: 'spin 0.8s linear infinite', margin: '0 auto',
     }} />
   );
+}
+
+function tabLabel(t: Tab): string {
+  switch (t) {
+    case 'cover': return '封面';
+    case 'abstract': return '摘要';
+    case 'acknowledgments': return '誌謝';
+    case 'chapters': return '章節';
+    case 'bibliography': return '參考文獻';
+    case 'figures': return '圖表清單';
+    case 'appendices': return '附錄';
+  }
 }
 
 function extractError(e: unknown): string {
