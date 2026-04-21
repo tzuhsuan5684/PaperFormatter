@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { generateDocx, uploadDraft } from './api';
-import { DownloadButton } from './components/DownloadButton';
+import { DocxPreview } from './components/DocxPreview';
 import { SchemaPreview, Tab } from './components/SchemaPreview';
-import { ThesisPreview } from './components/ThesisPreview';
 import { UploadZone } from './components/UploadZone';
 import { ThesisSchema } from './types/ThesisSchema';
 
-type Stage = 'idle' | 'uploading' | 'reviewing' | 'generating' | 'done';
+type Stage = 'idle' | 'uploading' | 'reviewing';
 
 export default function App() {
   const [stage, setStage] = useState<Stage>('idle');
   const [schema, setSchema] = useState<ThesisSchema | null>(null);
   const [error, setError] = useState('');
-  const [downloadUrl, setDownloadUrl] = useState('');
   const [activeTab, setActiveTab] = useState<Tab>('cover');
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   async function handleUpload(file: File) {
     setStage('uploading');
@@ -23,26 +23,33 @@ export default function App() {
       setSchema(result);
       setStage('reviewing');
     } catch (e: unknown) {
-      const msg = extractError(e);
-      setError(`上傳失敗：${msg}`);
+      setError(`上傳失敗：${extractError(e)}`);
       setStage('idle');
     }
   }
 
-  async function handleGenerate() {
+  async function handlePreview() {
     if (!schema) return;
-    setStage('generating');
+    setPreviewing(true);
     setError('');
     try {
       const blob = await generateDocx(schema);
-      const url = URL.createObjectURL(blob);
-      setDownloadUrl(url);
-      setStage('done');
+      setPreviewBlob(blob);
     } catch (e: unknown) {
-      const msg = extractError(e);
-      setError(`產生失敗：${msg}`);
-      setStage('reviewing');
+      setError(`產生失敗：${extractError(e)}`);
+    } finally {
+      setPreviewing(false);
     }
+  }
+
+  function handleDownload() {
+    if (!previewBlob) return;
+    const url = URL.createObjectURL(previewBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ncu_thesis.docx';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
   function handleReset() {
@@ -50,8 +57,8 @@ export default function App() {
     setSchema(null);
     setError('');
     setActiveTab('cover');
-    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    setDownloadUrl('');
+    setPreviewBlob(null);
+    setPreviewing(false);
   }
 
   return (
@@ -66,13 +73,7 @@ export default function App() {
         )}
       </header>
 
-      <main
-        style={{
-          maxWidth: stage === 'reviewing' ? 1440 : 960,
-          margin: '0 auto',
-          padding: '32px 20px',
-        }}
-      >
+      <main style={{ maxWidth: stage === 'reviewing' ? 1440 : 960, margin: '0 auto', padding: '32px 20px' }}>
         {error && (
           <div style={{ background: '#fdecea', border: '1px solid #f5c6cb', borderRadius: 8, padding: '12px 16px', marginBottom: 24, color: '#721c24' }}>
             {error}
@@ -83,7 +84,7 @@ export default function App() {
 
         {stage === 'uploading' && (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <Spinner />
+            <Spinner size={48} />
             <p style={{ marginTop: 24, fontSize: 16, color: '#333' }}>AI 正在解析論文草稿...</p>
             <p style={{ color: '#888', fontSize: 13 }}>這可能需要 20–60 秒，請稍候</p>
           </div>
@@ -92,28 +93,12 @@ export default function App() {
         {stage === 'reviewing' && schema && (
           <div>
             <div style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: 8, padding: '12px 16px', marginBottom: 24, color: '#2e7d32' }}>
-              ✅ 解析完成！左側編輯、右側即時預覽。完成後點擊「產生論文」
+              ✅ 解析完成！左側編輯資料，完成後點擊「產生預覽」查看真實 Word 輸出，再下載。
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                gap: 24,
-                alignItems: 'start',
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
               {/* 左：表單 */}
-              <div
-                style={{
-                  background: '#fff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 10,
-                  padding: 20,
-                  maxHeight: 'calc(100vh - 180px)',
-                  overflowY: 'auto',
-                }}
-              >
+              <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 20, maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
                 <SchemaPreview
                   schema={schema}
                   onChange={setSchema}
@@ -122,65 +107,31 @@ export default function App() {
                 />
               </div>
 
-              {/* 右：A4 即時預覽 */}
-              <div
-                style={{
-                  position: 'sticky',
-                  top: 20,
-                  background: '#e9ecf1',
-                  borderRadius: 10,
-                  padding: '24px 16px',
-                  maxHeight: 'calc(100vh - 180px)',
-                  overflowY: 'auto',
-                }}
-              >
-                <div style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 12, letterSpacing: 1 }}>
-                  A4 即時預覽 · {tabLabel(activeTab)}
+              {/* 右：Word 預覽 */}
+              <div style={{ position: 'sticky', top: 20, background: '#e9ecf1', borderRadius: 10, padding: '24px 16px', maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 12, color: '#666', letterSpacing: 1 }}>Word 預覽</span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={handlePreview}
+                      disabled={previewing}
+                      style={{ background: previewing ? '#aaa' : '#1a3a6b', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: previewing ? 'not-allowed' : 'pointer' }}
+                    >
+                      {previewing ? '產生中...' : '產生預覽'}
+                    </button>
+                    {previewBlob && !previewing && (
+                      <button
+                        onClick={handleDownload}
+                        style={{ background: '#2e7d32', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        ⬇ 下載 .docx
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <ThesisPreview schema={schema} tab={activeTab} />
+                <DocxPreview blob={previewBlob} loading={previewing} />
               </div>
             </div>
-
-            <div style={{ textAlign: 'center', marginTop: 32 }}>
-              <DownloadButton onClick={handleGenerate} loading={false} />
-            </div>
-          </div>
-        )}
-
-        {stage === 'generating' && (
-          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <Spinner />
-            <p style={{ marginTop: 24, fontSize: 16, color: '#333' }}>正在套用 NCU 格式並產生論文...</p>
-          </div>
-        )}
-
-        {stage === 'done' && (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ color: '#1a3a6b', marginBottom: 8 }}>論文已成功產生！</h2>
-            <p style={{ color: '#555', marginBottom: 32 }}>符合國立中央大學論文格式規範</p>
-            <a
-              href={downloadUrl}
-              download="ncu_thesis.docx"
-              style={{
-                display: 'inline-block',
-                background: '#1a3a6b',
-                color: '#fff',
-                textDecoration: 'none',
-                borderRadius: 8,
-                padding: '12px 32px',
-                fontSize: 16,
-                fontWeight: 600,
-                marginBottom: 16,
-              }}
-            >
-              ⬇ 下載 ncu_thesis.docx
-            </a>
-            <br />
-            <button onClick={handleReset}
-              style={{ background: 'none', border: '1px solid #1a3a6b', color: '#1a3a6b', borderRadius: 8, padding: '10px 24px', cursor: 'pointer', fontSize: 14, marginTop: 8 }}>
-              重新上傳另一份草稿
-            </button>
           </div>
         )}
       </main>
@@ -188,31 +139,21 @@ export default function App() {
   );
 }
 
-function Spinner() {
+function Spinner({ size = 48 }: { size?: number }) {
   return (
     <div style={{
-      width: 48, height: 48, border: '4px solid #e0e0e0',
-      borderTop: '4px solid #1a3a6b', borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite', margin: '0 auto',
+      width: size, height: size,
+      border: '4px solid #e0e0e0',
+      borderTop: '4px solid #1a3a6b',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite',
+      margin: '0 auto',
     }} />
   );
 }
 
-function tabLabel(t: Tab): string {
-  switch (t) {
-    case 'cover': return '封面';
-    case 'abstract': return '摘要';
-    case 'acknowledgments': return '誌謝';
-    case 'chapters': return '章節';
-    case 'bibliography': return '參考文獻';
-    case 'figures': return '圖表清單';
-    case 'appendices': return '附錄';
-  }
-}
-
 function extractError(e: unknown): string {
   if (e && typeof e === 'object' && 'response' in e) {
-    // FastAPI uses { detail: "..." }, our routes also use that format
     const resp = (e as { response?: { data?: { detail?: string; error?: string } } }).response;
     return resp?.data?.detail ?? resp?.data?.error ?? '伺服器錯誤';
   }
