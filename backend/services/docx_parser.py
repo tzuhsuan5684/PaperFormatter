@@ -4,8 +4,44 @@ from dataclasses import dataclass, field
 import mammoth
 from docx import Document
 from docx.oxml.ns import qn
-from docx.table import Table
+from docx.table import Table, _Cell
 from docx.text.paragraph import Paragraph
+
+
+def _extract_table_rows(tbl: Table) -> list[list[str]]:
+    """Extract cell text by walking raw XML, handling vMerge and gridSpan correctly."""
+    W_TCPR = qn("w:tcPr")
+    W_VMERGE = qn("w:vMerge")
+    W_GRIDSPAN = qn("w:gridSpan")
+    W_VAL = qn("w:val")
+
+    rows: list[list[str]] = []
+    for tr in tbl._tbl.tr_lst:
+        cells: list[str] = []
+        for tc in tr.tc_lst:
+            tcPr = tc.find(W_TCPR)
+
+            # vMerge with no val (or val != "restart") = continuation row of a vertical span
+            is_continuation = False
+            if tcPr is not None:
+                vMerge = tcPr.find(W_VMERGE)
+                if vMerge is not None and vMerge.get(W_VAL) != "restart":
+                    is_continuation = True
+
+            cell_text = "" if is_continuation else _Cell(tc, tbl).text.strip()
+
+            # gridSpan > 1 means this cell spans multiple columns; pad with empty strings
+            grid_span = 1
+            if tcPr is not None:
+                gs = tcPr.find(W_GRIDSPAN)
+                if gs is not None:
+                    grid_span = int(gs.get(W_VAL, "1"))
+
+            cells.append(cell_text)
+            cells.extend([""] * (grid_span - 1))
+
+        rows.append(cells)
+    return rows
 
 
 @dataclass
@@ -35,16 +71,7 @@ def parse_docx(file_bytes: bytes) -> ParsedDoc:
 
         elif tag == W_TBL:
             tbl = Table(child, doc)
-            rows: list[list[str]] = []
-            seen: set[int] = set()
-            for row in tbl.rows:
-                cells: list[str] = []
-                for cell in row.cells:
-                    cid = id(cell._tc)
-                    cells.append(cell.text.strip() if cid not in seen else "")
-                    seen.add(cid)
-                rows.append(cells)
-            raw_tables[table_counter] = rows
+            raw_tables[table_counter] = _extract_table_rows(tbl)
             text_parts.append(f"[TABLE:{table_counter}]")
             table_counter += 1
 

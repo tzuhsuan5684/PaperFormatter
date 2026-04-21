@@ -46,6 +46,10 @@ async def upload(file: UploadFile = File(...)):
 
     inject_table_markers(schema)
 
+    (run_dir / "raw_tables.json").write_text(
+        json.dumps(parsed.raw_tables, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     (run_dir / "output.json").write_text(
         json.dumps(schema.model_dump(), ensure_ascii=False, indent=2),
         encoding="utf-8",
