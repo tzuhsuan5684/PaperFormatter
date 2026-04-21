@@ -28,6 +28,7 @@ class TableEntry(BaseModel):
     number: int
     title: str
     page: Optional[int] = None
+    rows: list[list[str]] = Field(default_factory=list)
 
 
 class SymbolEntry(BaseModel):
