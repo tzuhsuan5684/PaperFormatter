@@ -1,12 +1,36 @@
 """Body content builders: chapters, sections, tables, bibliography, appendices."""
+import base64
+import io
+
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches
 
-from schemas.thesis_schema import Appendix, Chapter, Section, TableEntry
+from schemas.thesis_schema import Appendix, Chapter, FigureEntry, Section, TableEntry
 from services.docx_primitives import (
     BODY_PT, _add_page_break, _body, _center, _chapter_heading,
     _heading1, _heading2, _para_fmt, _set_font, _to_roman, _to_zh,
 )
+
+
+# ── Figure rendering ──────────────────────────────────────────────────────────
+
+def render_figure(doc: Document, figures: list[FigureEntry], marker_idx: int) -> None:
+    if marker_idx >= len(figures):
+        return
+    entry = figures[marker_idx]
+    if not entry.images:
+        return
+
+    for img in entry.images:
+        img_stream = io.BytesIO(base64.b64decode(img.imageData))
+        para = doc.add_paragraph()
+        _para_fmt(para, align=WD_ALIGN_PARAGRAPH.CENTER, space_before_pt=4)
+        para.add_run().add_picture(img_stream, width=Inches(5))
+
+    caption = doc.add_paragraph()
+    _para_fmt(caption, align=WD_ALIGN_PARAGRAPH.CENTER, space_after_pt=6)
+    _set_font(caption.add_run(f"圖 {entry.number}　{entry.title}"), bold=True)
 
 
 # ── Table rendering ───────────────────────────────────────────────────────────
@@ -43,7 +67,8 @@ def render_table(doc: Document, tables: list[TableEntry], marker_idx: int) -> No
 # ── Section / chapter builders ────────────────────────────────────────────────
 
 def build_section(doc: Document, sec: Section, depth: int,
-                  tables: list[TableEntry] | None = None) -> None:
+                  tables: list[TableEntry] | None = None,
+                  figures: list[FigureEntry] | None = None) -> None:
     label = f"{sec.id}　{sec.titleZh}"
     if depth == 1:
         _heading1(doc, label)
@@ -64,16 +89,22 @@ def build_section(doc: Document, sec: Section, depth: int,
                 render_table(doc, tables, int(stripped[7:-1]))
             except ValueError:
                 _body(doc, line)
+        elif stripped.startswith("[FIGURE:") and stripped.endswith("]") and figures:
+            try:
+                render_figure(doc, figures, int(stripped[8:-1]))
+            except ValueError:
+                _body(doc, line)
         else:
             _body(doc, line)
 
     if sec.subsections:
         for sub in sec.subsections:
-            build_section(doc, sub, depth + 1, tables)
+            build_section(doc, sub, depth + 1, tables, figures)
 
 
 def build_chapters(doc: Document, chapters: list[Chapter],
-                   tables: list[TableEntry] | None = None) -> None:
+                   tables: list[TableEntry] | None = None,
+                   figures: list[FigureEntry] | None = None) -> None:
     for ch in chapters:
         _add_page_break(doc)
         _chapter_heading(doc, f"第{_to_zh(ch.number)}章　{ch.titleZh}", size_pt=16)
@@ -81,7 +112,7 @@ def build_chapters(doc: Document, chapters: list[Chapter],
             _center(doc, f"Chapter {_to_roman(ch.number)}: {ch.titleEn}",
                     size_pt=14, bold=True, italic=True, space_after=8)
         for sec in ch.sections:
-            build_section(doc, sec, 1, tables)
+            build_section(doc, sec, 1, tables, figures)
 
 
 # ── Back matter builders ──────────────────────────────────────────────────────

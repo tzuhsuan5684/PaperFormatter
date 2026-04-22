@@ -18,10 +18,16 @@ class Chapter(BaseModel):
     sections: list[Section]
 
 
+class FigureImage(BaseModel):
+    imageData: str   # base64-encoded bytes
+    imageExt: str    # "png", "jpeg", etc.
+
+
 class FigureEntry(BaseModel):
     number: int
     title: str
     page: Optional[int] = None
+    images: list[FigureImage] = Field(default_factory=list)
 
 
 class TableEntry(BaseModel):

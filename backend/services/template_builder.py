@@ -111,7 +111,7 @@ def build_thesis_docx(schema: ThesisSchema) -> bytes:
     _set_section_page_number(sec2, fmt="decimal", start=1)
     _add_footer_page_number(sec2)
 
-    build_chapters(doc, schema.chapters, schema.tables)
+    build_chapters(doc, schema.chapters, schema.tables, schema.figures)
     build_bibliography(doc, schema.bibliography)
     if schema.appendices:
         build_appendices(doc, schema.appendices)
