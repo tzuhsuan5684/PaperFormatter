@@ -50,7 +50,7 @@ export function DocxPreview({ blob, loading }: Props) {
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%' }} />;
+  return <div ref={containerRef} className="docx-output" style={{ width: '100%' }} />;
 }
 
 const centerStyle: React.CSSProperties = {
