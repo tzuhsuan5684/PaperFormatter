@@ -1,6 +1,5 @@
 """Front matter section builders: cover, abstracts, acknowledgments, TOC, symbols."""
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -79,7 +78,7 @@ def build_placeholder(doc: Document, title: str) -> None:
 
 def build_abstract_zh(doc: Document, schema: ThesisSchema) -> None:
     _add_page_break(doc)
-    _center(doc, "摘要", size_pt=16, bold=True, space_after=8)
+    _center(doc, "摘要", size_pt=16, bold=True, space_after=8, style="FMTitle")
     _body(doc, schema.abstractZh.content)
     doc.add_paragraph()
     para = doc.add_paragraph()
@@ -93,7 +92,7 @@ def build_abstract_zh(doc: Document, schema: ThesisSchema) -> None:
 def build_abstract_en(doc: Document, schema: ThesisSchema) -> None:
     _add_page_break(doc)
     _center(doc, schema.cover.titleEn, size_pt=14, bold=True, italic=True, space_after=4)
-    _center(doc, "Abstract", size_pt=14, bold=True, space_after=8)
+    _center(doc, "Abstract", size_pt=14, bold=True, space_after=8, style="FMTitle")
     _body(doc, schema.abstractEn.content)
     doc.add_paragraph()
     para = doc.add_paragraph()
@@ -106,7 +105,7 @@ def build_abstract_en(doc: Document, schema: ThesisSchema) -> None:
 
 def build_acknowledgments(doc: Document, schema: ThesisSchema) -> None:
     _add_page_break(doc)
-    _center(doc, "誌謝", size_pt=16, bold=True, space_after=8)
+    _center(doc, "誌謝", size_pt=16, bold=True, space_after=8, style="FMTitle")
     for para_text in schema.acknowledgments.split("\n"):
         if para_text.strip():
             _body(doc, para_text)
@@ -114,25 +113,25 @@ def build_acknowledgments(doc: Document, schema: ThesisSchema) -> None:
 
 def build_toc(doc: Document) -> None:
     _add_page_break(doc)
-    _center(doc, "目錄", size_pt=16, bold=True, space_after=8)
-    _insert_toc_field(doc, r'\o "1-3" \h \z \u')
+    _center(doc, "目錄", size_pt=16, bold=True, space_after=8, style="FMTitle")
+    _insert_toc_field(doc, r'\t "FMTitle,1" \o "1-3" \h \z')
 
 
 def build_figure_list(doc: Document) -> None:
     _add_page_break(doc)
-    _center(doc, "圖目錄", size_pt=16, bold=True, space_after=8)
-    _insert_toc_field(doc, r'\h \z \c "圖"')
+    _center(doc, "圖目錄", size_pt=16, bold=True, space_after=8, style="FMTitle")
+    _insert_toc_field(doc, r'\t "FigCaption,1" \h \z')
 
 
 def build_table_list(doc: Document) -> None:
     _add_page_break(doc)
-    _center(doc, "表目錄", size_pt=16, bold=True, space_after=8)
-    _insert_toc_field(doc, r'\h \z \c "表"')
+    _center(doc, "表目錄", size_pt=16, bold=True, space_after=8, style="FMTitle")
+    _insert_toc_field(doc, r'\t "TblCaption,1" \h \z')
 
 
 def build_symbols(doc: Document, symbols: list[SymbolEntry]) -> None:
     _add_page_break(doc)
-    _center(doc, "符號說明", size_pt=16, bold=True, space_after=8)
+    _center(doc, "符號說明", size_pt=16, bold=True, space_after=8, style="FMTitle")
     for s in symbols:
         para = doc.add_paragraph()
         _para_fmt(para)

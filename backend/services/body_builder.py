@@ -28,7 +28,7 @@ def render_figure(doc: Document, figures: list[FigureEntry], marker_idx: int) ->
         _para_fmt(para, align=WD_ALIGN_PARAGRAPH.CENTER, space_before_pt=4)
         para.add_run().add_picture(img_stream, width=Inches(5))
 
-    caption = doc.add_paragraph()
+    caption = doc.add_paragraph(style="FigCaption")
     _para_fmt(caption, align=WD_ALIGN_PARAGRAPH.CENTER, space_after_pt=6)
     _set_font(caption.add_run(f"圖 {entry.number}　{entry.title}"), bold=True)
 
@@ -45,7 +45,7 @@ def render_table(doc: Document, tables: list[TableEntry], marker_idx: int) -> No
 
     col_count = max(len(row) for row in entry.rows)
 
-    caption = doc.add_paragraph()
+    caption = doc.add_paragraph(style="TblCaption")
     _para_fmt(caption, align=WD_ALIGN_PARAGRAPH.CENTER, space_before_pt=6)
     _set_font(caption.add_run(f"表 {entry.number}　{entry.title}"), bold=True)
 
@@ -107,7 +107,7 @@ def build_chapters(doc: Document, chapters: list[Chapter],
                    figures: list[FigureEntry] | None = None) -> None:
     for ch in chapters:
         _add_page_break(doc)
-        _chapter_heading(doc, f"第{_to_zh(ch.number)}章　{ch.titleZh}", size_pt=16)
+        _chapter_heading(doc, f"{_to_zh(ch.number)}、　{ch.titleZh}", size_pt=16)
         if ch.titleEn:
             _center(doc, f"Chapter {_to_roman(ch.number)}: {ch.titleEn}",
                     size_pt=14, bold=True, italic=True, space_after=8)

@@ -3,6 +3,7 @@ import io
 
 from docx import Document
 from docx.enum.section import WD_SECTION
+from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
@@ -34,6 +35,26 @@ def _configure_heading_styles(doc: Document) -> None:
         style.font.name = FONT_EN
         style.font.size = Pt(size_pt)
         style.font.bold = bold
+        style.font.color.rgb = RGBColor(0, 0, 0)
+        rPr = style.element.get_or_add_rPr()
+        for existing in rPr.findall(qn("w:rFonts")):
+            rPr.remove(existing)
+        rFonts = OxmlElement("w:rFonts")
+        rFonts.set(qn("w:ascii"), FONT_EN)
+        rFonts.set(qn("w:hAnsi"), FONT_EN)
+        rFonts.set(qn("w:eastAsia"), FONT_ZH)
+        rPr.insert(0, rFonts)
+
+
+def _configure_caption_styles(doc: Document) -> None:
+    for style_name in ("FigCaption", "TblCaption", "FMTitle"):
+        try:
+            style = doc.styles[style_name]
+        except KeyError:
+            style = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
+        style.font.name = FONT_EN
+        style.font.size = Pt(12)
+        style.font.bold = True
         style.font.color.rgb = RGBColor(0, 0, 0)
         rPr = style.element.get_or_add_rPr()
         for existing in rPr.findall(qn("w:rFonts")):
@@ -79,6 +100,7 @@ def build_thesis_docx(schema: ThesisSchema) -> bytes:
     doc = Document()
     _configure_heading_styles(doc)
     _configure_toc_styles(doc)
+    _configure_caption_styles(doc)
     _enable_update_fields_on_open(doc)
 
     for p in doc.paragraphs:

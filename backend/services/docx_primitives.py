@@ -104,8 +104,8 @@ def _add_page_break(doc: Document) -> None:
 # ── Paragraph factories ───────────────────────────────────────────────────────
 
 def _center(doc: Document, text: str, size_pt=BODY_PT, bold=False, italic=False,
-            space_before=0, space_after=0) -> None:
-    para = doc.add_paragraph()
+            space_before=0, space_after=0, style: str | None = None) -> None:
+    para = doc.add_paragraph(style=style) if style else doc.add_paragraph()
     _para_fmt(para, align=WD_ALIGN_PARAGRAPH.CENTER,
               space_before_pt=space_before, space_after_pt=space_after)
     run = para.add_run(text)
@@ -138,7 +138,7 @@ def _heading2(doc: Document, text: str) -> None:
 def _chapter_heading(doc: Document, text: str, size_pt: int, italic: bool = False) -> None:
     """Heading 1 style but centred, so Word's TOC picks it up."""
     para = doc.add_paragraph(style="Heading 1")
-    _para_fmt(para, align=WD_ALIGN_PARAGRAPH.CENTER, space_after_pt=6)
+    _para_fmt(para, align=WD_ALIGN_PARAGRAPH.LEFT, space_after_pt=6)
     run = para.add_run(text)
     _set_font(run, size_pt=size_pt, bold=True, italic=italic)
 
