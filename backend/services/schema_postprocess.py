@@ -3,6 +3,24 @@ import re
 
 from schemas.thesis_schema import Section, ThesisSchema
 
+_BIBLIOGRAPHY_TITLES = re.compile(
+    r'^\s*(參考文獻|references|bibliography)\s*$', re.IGNORECASE
+)
+
+
+def strip_bibliography_chapter(schema: ThesisSchema) -> None:
+    """Remove any chapter whose title is a bibliography heading.
+
+    When the uploaded draft contains a dedicated bibliography chapter (e.g.
+    "六、 參考文獻"), the LLM includes it in `chapters`. Since
+    `build_bibliography` already renders a dedicated bibliography section,
+    keeping it in `chapters` would produce a duplicate.
+    """
+    schema.chapters = [
+        ch for ch in schema.chapters
+        if not _BIBLIOGRAPHY_TITLES.match(ch.titleZh)
+    ]
+
 _TABLE_REF_RE = re.compile(r'表\s*(\d+)')
 _FIGURE_REF_RE = re.compile(r'圖\s*(\d+)')
 

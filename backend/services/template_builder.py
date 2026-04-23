@@ -134,7 +134,7 @@ def build_thesis_docx(schema: ThesisSchema) -> bytes:
     _add_footer_page_number(sec2)
 
     build_chapters(doc, schema.chapters, schema.tables, schema.figures)
-    build_bibliography(doc, schema.bibliography)
+    build_bibliography(doc, schema.bibliography, len(schema.chapters) + 1)
     if schema.appendices:
         build_appendices(doc, schema.appendices)
 

@@ -117,9 +117,9 @@ def build_chapters(doc: Document, chapters: list[Chapter],
 
 # ── Back matter builders ──────────────────────────────────────────────────────
 
-def build_bibliography(doc: Document, bibliography: list[str]) -> None:
+def build_bibliography(doc: Document, bibliography: list[str], chapter_number: int) -> None:
     _add_page_break(doc)
-    _center(doc, "參考文獻", size_pt=16, bold=True, space_after=8)
+    _chapter_heading(doc, f"{_to_zh(chapter_number)}、　參考文獻", size_pt=16)
     for ref in bibliography:
         if ref.strip():
             para = doc.add_paragraph()

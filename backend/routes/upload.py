@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 
 from services.docx_parser import parse_docx
 from services.llm_extractor import extract_schema
-from services.schema_postprocess import inject_figure_markers, inject_table_markers
+from services.schema_postprocess import inject_figure_markers, inject_table_markers, strip_bibliography_chapter
 
 _LOG_DIR = Path(__file__).parent.parent / "logs"
 
@@ -87,6 +87,7 @@ async def upload(file: UploadFile = File(...)):
             ]
             schema.figures.append(placeholder)
 
+    strip_bibliography_chapter(schema)
     inject_table_markers(schema)
     inject_figure_markers(schema, parsed_text=parsed.text)
 
