@@ -5,9 +5,13 @@ from docx.oxml.ns import qn
 
 from schemas.thesis_schema import SymbolEntry, ThesisSchema
 from services.docx_primitives import (
-    BODY_PT, _add_page_break, _body, _center, _para_fmt, _set_font,
+    BODY_PT,
+    _add_page_break,
+    _body,
+    _center,
+    _para_fmt,
+    _set_font,
 )
-
 
 # ── TOC field helper (used only within this module) ───────────────────────────
 

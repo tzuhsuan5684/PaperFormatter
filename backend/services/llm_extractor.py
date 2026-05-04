@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from openai import AsyncOpenAI
+
 from schemas.thesis_schema import ThesisSchema
 
 _LOG_DIR = Path(__file__).parent.parent / "logs"

@@ -8,10 +8,18 @@ from docx.shared import Inches
 
 from schemas.thesis_schema import Appendix, Chapter, FigureEntry, Section, TableEntry
 from services.docx_primitives import (
-    BODY_PT, _add_page_break, _body, _center, _chapter_heading,
-    _heading1, _heading2, _para_fmt, _set_font, _to_roman, _to_zh,
+    BODY_PT,
+    _add_page_break,
+    _body,
+    _center,
+    _chapter_heading,
+    _heading1,
+    _heading2,
+    _para_fmt,
+    _set_font,
+    _to_roman,
+    _to_zh,
 )
-
 
 # ── Figure rendering ──────────────────────────────────────────────────────────
 

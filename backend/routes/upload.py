@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from services.docx_parser import parse_docx
 from services.llm_extractor import extract_schema

@@ -10,18 +10,29 @@ from docx.shared import Pt, RGBColor
 
 from schemas.thesis_schema import ThesisSchema
 from services.body_builder import (
-    build_appendices, build_bibliography, build_chapters,
+    build_appendices,
+    build_bibliography,
+    build_chapters,
 )
 from services.docx_primitives import (
-    FONT_EN, FONT_ZH, _add_footer_page_number, _add_page_break,
-    _set_section_page_number, _setup_section,
+    FONT_EN,
+    FONT_ZH,
+    _add_footer_page_number,
+    _add_page_break,
+    _set_section_page_number,
+    _setup_section,
 )
 from services.front_matter_builder import (
-    build_abstract_en, build_abstract_zh, build_acknowledgments,
-    build_cover, build_figure_list, build_placeholder, build_symbols,
-    build_table_list, build_toc,
+    build_abstract_en,
+    build_abstract_zh,
+    build_acknowledgments,
+    build_cover,
+    build_figure_list,
+    build_placeholder,
+    build_symbols,
+    build_table_list,
+    build_toc,
 )
-
 
 # ── Word document style setup (NCU-specific, called once per document) ────────
 
