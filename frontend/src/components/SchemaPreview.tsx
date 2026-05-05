@@ -59,7 +59,7 @@ const textarea = (rows = 4): React.CSSProperties => ({
 });
 
 // ─── Tag input ────────────────────────────────────────────────────────────────
-function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
+export function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
   const [val, setVal] = useState('');
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, border: '1px solid #ccc', borderRadius: 6, padding: 6 }}>
@@ -88,7 +88,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
 }
 
 // ─── Section editor ───────────────────────────────────────────────────────────
-function SectionEditor({
+export function SectionEditor({
   sec,
   onChange,
 }: {
