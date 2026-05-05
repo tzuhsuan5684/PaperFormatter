@@ -8,7 +8,11 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from services.docx_parser import parse_docx
 from services.llm_extractor import extract_schema
-from services.schema_postprocess import inject_figure_markers, inject_table_markers, strip_bibliography_chapter
+from services.schema_postprocess import (
+    inject_figure_markers,
+    inject_table_markers,
+    strip_bibliography_chapter,
+)
 
 _LOG_DIR = Path(__file__).parent.parent / "logs"
 

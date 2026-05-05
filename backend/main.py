@@ -5,15 +5,15 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from routes.generate import router as generate_router
+from routes.upload import router as upload_router
+
 # Use absolute path so .env is found regardless of working directory,
 # and override=True ensures .env values win over any system env vars.
 load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
 
 _key = os.environ.get("OPENAI_API_KEY", "")
 print(f"[startup] OPENAI_API_KEY loaded: {_key[:8]}...{_key[-4:] if len(_key) > 12 else '(too short)'}")
-
-from routes.generate import router as generate_router
-from routes.upload import router as upload_router
 
 app = FastAPI(title="NCU Thesis Formatter")
 

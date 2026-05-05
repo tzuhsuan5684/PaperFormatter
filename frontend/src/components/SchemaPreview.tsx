@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Appendix,
-  Chapter,
-  FigureEntry,
-  Section,
-  SymbolEntry,
-  TableEntry,
-  ThesisSchema,
-} from '../types/ThesisSchema';
+import { Section, ThesisSchema } from '../types/ThesisSchema';
 
 export type Tab = 'cover' | 'abstract' | 'acknowledgments' | 'chapters' | 'bibliography' | 'figures' | 'appendices';
 
