@@ -157,11 +157,3 @@ npm run dev
 - Body: `{ thesis: ThesisSchema }`
 - Response: Binary DOCX（`ncu_thesis.docx`）
 
----
-
-## 環境變數（backend/.env）
-
-```
-OPENAI_API_KEY=sk-...
-PORT=3001
-```
