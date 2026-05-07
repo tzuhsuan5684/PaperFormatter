@@ -28,5 +28,8 @@ Thumbs.db
 .idea/
 *.swp
 
+# Claude Code
+.claude/
+
 # Logs
 backend/logs/
